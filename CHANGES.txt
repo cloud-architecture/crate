@@ -18,5 +18,8 @@ Breaking Changes
 Changes
 =======
 
+- Added cluster checks that warn if some tables need to be recreated so that
+  they are compatible with future versions of CrateDB.
+
 Fixes
 =====

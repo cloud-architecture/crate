@@ -23,11 +23,32 @@
 package io.crate.operation.reference.sys.check.cluster;
 
 import io.crate.test.integration.CrateUnitTest;
+import org.elasticsearch.Version;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.common.settings.Settings;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
 
 public class LuceneVersionChecksTest extends CrateUnitTest {
+
+    @Test
+    public void testRecreationRequired() {
+        assertThat(LuceneVersionChecks.isRecreationRequired(null), is(false));
+        IndexMetaData recreationRequired = new IndexMetaData.Builder("testRecreationRequired")
+            .settings(Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, Version.V_2_4_2).build())
+            .numberOfShards(5)
+            .numberOfReplicas(2)
+            .build();
+        assertThat(LuceneVersionChecks.isRecreationRequired(recreationRequired), is(true));
+
+        IndexMetaData noRecreationRequired = new IndexMetaData.Builder("testNoRecreationRequired")
+            .settings(Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, Version.V_5_0_1).build())
+            .numberOfShards(5)
+            .numberOfReplicas(2)
+            .build();
+        assertThat(LuceneVersionChecks.isRecreationRequired(noRecreationRequired), is(false));
+    }
 
     @Test
     public void testUpgradeRequired() {
