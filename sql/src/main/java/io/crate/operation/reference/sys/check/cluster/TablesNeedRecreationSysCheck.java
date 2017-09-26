@@ -41,7 +41,7 @@ public class TablesNeedRecreationSysCheck extends AbstractSysCheck {
 
     public static final int ID = 5;
     public static final String DESCRIPTION =
-        "The following tables need to be recreated for compatibility with future versions of CrateDB: ";
+        "The following tables need to be recreated for compatibility with future versions of CrateDB >= 3.0.0: ";
 
     private final ClusterService clusterService;
     private volatile Collection<String> tablesNeedRecreation;
