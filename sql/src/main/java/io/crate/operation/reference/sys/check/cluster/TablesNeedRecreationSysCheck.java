@@ -22,13 +22,19 @@
 
 package io.crate.operation.reference.sys.check.cluster;
 
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
+import com.google.common.annotations.VisibleForTesting;
+import io.crate.metadata.TableIdent;
 import io.crate.operation.reference.sys.check.AbstractSysCheck;
 import org.apache.lucene.util.BytesRef;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.inject.Singleton;
 
 import java.util.Collection;
+import java.util.TreeSet;
 
 @Singleton
 public class TablesNeedRecreationSysCheck extends AbstractSysCheck {
@@ -54,7 +60,30 @@ public class TablesNeedRecreationSysCheck extends AbstractSysCheck {
 
     @Override
     public boolean validate() {
-        tablesNeedRecreation = LuceneVersionChecks.tablesNeedRecreation(clusterService.state().metaData());
+        tablesNeedRecreation = tablesNeedRecreation(clusterService.state().metaData());
         return tablesNeedRecreation.isEmpty();
+    }
+
+    // We need to check for the version that the index was created since the lucene segments might
+    // be automatically upgraded to the latest version (can happen when data was in the translog) so
+    // minimumCompatVersion cannot be used to indicate that a table recreation is needed.
+    @VisibleForTesting
+    static boolean isRecreationRequired(IndexMetaData indexMetaData) {
+        return indexMetaData != null && indexMetaData.getCreationVersion().before(org.elasticsearch.Version.V_5_0_0);
+    }
+
+    /**
+     * Retrieves an ordered collection of table FQNs that need
+     * to be recreated to be compatible with future CrateDB versions.
+     * @return the ordered collection of table FQNs that need to be recreated
+     */
+    static Collection<String> tablesNeedRecreation(MetaData clusterIndexMetaData) {
+        Collection<String> tablesNeedRecreation = new TreeSet<>();
+        for (ObjectObjectCursor<String, IndexMetaData> entry : clusterIndexMetaData.indices()) {
+            if (isRecreationRequired(entry.value)) {
+                tablesNeedRecreation.add(TableIdent.fromIndexName(entry.key).fqn());
+            }
+        }
+        return tablesNeedRecreation;
     }
 }

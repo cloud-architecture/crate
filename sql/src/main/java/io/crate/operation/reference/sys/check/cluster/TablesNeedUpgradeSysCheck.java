@@ -83,7 +83,7 @@ public class TablesNeedUpgradeSysCheck extends AbstractSysCheck {
     @Override
     public CompletableFuture<?> computeResult() {
         Collection<String> tablesNeedRecreation =
-            LuceneVersionChecks.tablesNeedRecreation(clusterService.state().metaData());
+            TablesNeedRecreationSysCheck.tablesNeedRecreation(clusterService.state().metaData());
 
         final CompletableFuture<Collection<String>> result = new CompletableFuture<>();
         Object[] sqlParam = tablesNeedRecreation.toArray(new String[]{});

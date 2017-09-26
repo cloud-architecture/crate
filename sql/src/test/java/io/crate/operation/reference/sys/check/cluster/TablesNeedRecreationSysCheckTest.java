@@ -23,23 +23,30 @@
 package io.crate.operation.reference.sys.check.cluster;
 
 import io.crate.test.integration.CrateUnitTest;
+import org.elasticsearch.Version;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.common.settings.Settings;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
 
-public class LuceneVersionChecksTest extends CrateUnitTest {
+public class TablesNeedRecreationSysCheckTest extends CrateUnitTest {
 
     @Test
-    public void testUpgradeRequired() {
-        assertThat(LuceneVersionChecks.isUpgradeRequired(null), is(false));
-        assertThat(LuceneVersionChecks.isUpgradeRequired("4.9.0"), is(true));
-        assertThat(LuceneVersionChecks.isUpgradeRequired("5.0.0"), is(true));
-    }
+    public void testRecreationRequired() {
+        assertThat(TablesNeedRecreationSysCheck.isRecreationRequired(null), is(false));
+        IndexMetaData recreationRequired = new IndexMetaData.Builder("testRecreationRequired")
+            .settings(Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, Version.V_2_4_2).build())
+            .numberOfShards(5)
+            .numberOfReplicas(2)
+            .build();
+        assertThat(TablesNeedRecreationSysCheck.isRecreationRequired(recreationRequired), is(true));
 
-    @Test
-    public void testUpgradeRequiredInvalidArg() {
-        expectedException.expect(IllegalArgumentException.class);
-        expectedException.expectMessage("'invalidVersion' is not a valid Lucene version");
-        LuceneVersionChecks.isUpgradeRequired("invalidVersion");
+        IndexMetaData noRecreationRequired = new IndexMetaData.Builder("testNoRecreationRequired")
+            .settings(Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, Version.V_5_0_1).build())
+            .numberOfShards(5)
+            .numberOfReplicas(2)
+            .build();
+        assertThat(TablesNeedRecreationSysCheck.isRecreationRequired(noRecreationRequired), is(false));
     }
 }
